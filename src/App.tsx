@@ -56,7 +56,7 @@ const postGroups: PostGroup[] = [
         date: '2025 年 03 月 31 日',
         category: '效率',
         tags: ['工作流', '复盘'],
-        summary: '记录一次从混乱到清晰的整理过程，给自己的数字花园留一条可回溯的路径。',
+        summary: '记录一次从混乱到清晰的整理过程，给自己的博客内容留一条可回溯的路径。',
         accent: 'green',
       },
       {
@@ -245,7 +245,7 @@ function App() {
           <div>
             <p className="kicker"><span className="kicker-line" /> DIGITAL GARDEN / 01</p>
             <h2>把想法种下来，<br /><span>让时间替你浇水。</span></h2>
-            <p className="hero-copy">这里是我的中文数字花园。你会看到技术笔记、设计观察、项目记录，以及一些还没有想明白的生活问题。</p>
+            <p className="hero-copy">这里是我的中文博客。你会看到技术笔记、设计观察、项目记录，以及一些还没有想明白的生活问题。</p>
           </div>
           <div className="hero-stamp" aria-hidden="true">
             <span className="stamp-text">GROW<br />SLOWLY</span>
