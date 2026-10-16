@@ -1,4 +1,4 @@
-# 林间笔记
+# Xuan 的数字花园
 
 一个参考 Tania Rascia Blog 信息架构搭建的中文数字花园首页，使用 React + Vite + TypeScript。
 
