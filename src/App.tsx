@@ -157,7 +157,7 @@ function App() {
       <header className="topbar">
         <a className="brand brand-mobile" href="#top" aria-label="回到首页">
           <span className="brand-mark">X</span>
-          <span>Xuan 的数字花园</span>
+          <span>Xuan Blog</span>
         </a>
         <div className="topbar-right">
           <span className="status-dot" aria-hidden="true" />
@@ -197,7 +197,7 @@ function App() {
         <div className="sidebar-topline">
           <a className="brand" href="#top">
             <span className="brand-mark">X</span>
-            <span>Xuan 的数字花园</span>
+            <span>Xuan Blog</span>
           </a>
           <button className="icon-button sidebar-close" type="button" aria-label="关闭菜单" onClick={() => setMenuOpen(false)}>
             <X size={18} />
@@ -338,7 +338,7 @@ function App() {
         </section>
 
         <footer className="footer" id="projects">
-          <div className="footer-brand"><span className="brand-mark">X</span><span>Xuan 的数字花园</span></div>
+          <div className="footer-brand"><span className="brand-mark">X</span><span>Xuan Blog</span></div>
           <p>Made with curiosity · © 2025</p>
           <div className="footer-links"><a href="#rss">RSS</a><a href="https://github.com" target="_blank" rel="noreferrer">GitHub</a><a href="#about">关于</a></div>
         </footer>
