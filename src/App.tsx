@@ -243,7 +243,7 @@ function App() {
       <main className="main-content" id="top">
         <section className="hero-section" id="about">
           <div>
-            <p className="kicker"><span className="kicker-line" /> DIGITAL GARDEN / 01</p>
+            <p className="kicker"><span className="kicker-line" /> BLOG / 01</p>
             <h2>把想法种下来，<br /><span>让时间替你浇水。</span></h2>
             <p className="hero-copy">这里是我的中文博客。你会看到技术笔记、设计观察、项目记录，以及一些还没有想明白的生活问题。</p>
           </div>
