@@ -9,8 +9,7 @@ import {
 import { ArrowLeft, Check, PenLine, Search, X } from './icons'
 import {
   countTreeStats,
-  createInitialAgentMindmap,
-  MINDMAP_STORAGE_KEY,
+  getPublishedMindmap,
   TAG_CYCLE,
   type MindNode,
 } from './mindmapData'
@@ -27,6 +26,8 @@ type EdgeSpec = {
   to: string
   active: boolean
 }
+
+const IS_LOCAL_DEV = import.meta.env.DEV
 
 function generateNodeId(): string {
   return `nd_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
@@ -54,21 +55,6 @@ function locateNode(
   return null
 }
 
-function loadPersistedMindmap(): MindNode {
-  try {
-    const raw = localStorage.getItem(MINDMAP_STORAGE_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as MindNode
-      if (parsed && parsed.id === 'root' && Array.isArray(parsed.children)) {
-        return parsed
-      }
-    }
-  } catch {
-    // fallback to default
-  }
-  return createInitialAgentMindmap()
-}
-
 type AgentMindmapProps = {
   onBackToArticles?: () => void
   onTreeChange?: (root: MindNode) => void
@@ -78,12 +64,15 @@ export function AgentMindmap({
   onBackToArticles,
   onTreeChange,
 }: AgentMindmapProps) {
-  const [tree, setTree] = useState<MindNode>(loadPersistedMindmap)
+  const [tree, setTree] = useState<MindNode>(getPublishedMindmap)
+  const [previewReadonly, setPreviewReadonly] = useState<boolean>(false)
+  const canEdit = IS_LOCAL_DEV && !previewReadonly
+
   const [activeChapterId, setActiveChapterId] = useState<string>(
-    () => loadPersistedMindmap().children[0]?.id ?? 'root',
+    () => getPublishedMindmap().children[0]?.id ?? 'root',
   )
   const [selectedId, setSelectedId] = useState<string>(
-    () => loadPersistedMindmap().children[0]?.id ?? 'root',
+    () => getPublishedMindmap().children[0]?.id ?? 'root',
   )
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState<string>('')
@@ -91,6 +80,8 @@ export function AgentMindmap({
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [hideTags, setHideTags] = useState<boolean>(false)
   const [undoStack, setUndoStack] = useState<MindNode[]>([])
+  const [isDirty, setIsDirty] = useState<boolean>(false)
+  const [saving, setSaving] = useState<boolean>(false)
   const [toastMsg, setToastMsg] = useState<string | null>(null)
   const [svgPaths, setSvgPaths] = useState<
     { d: string; active: boolean; sx: number; sy: number; tx: number; ty: number }[]
@@ -104,24 +95,19 @@ export function AgentMindmap({
   const showToast = useCallback((msg: string) => {
     setToastMsg(msg)
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
-    toastTimerRef.current = window.setTimeout(() => setToastMsg(null), 2200)
+    toastTimerRef.current = window.setTimeout(() => setToastMsg(null), 2400)
   }, [])
 
-  // 持久化并同步外部计数
   useEffect(() => {
-    try {
-      localStorage.setItem(MINDMAP_STORAGE_KEY, JSON.stringify(tree))
-    } catch {
-      // ignore storage quota errors
-    }
     onTreeChange?.(tree)
   }, [tree, onTreeChange])
 
   const mutateTree = useCallback(
-    (updater: (draft: MindNode) => void, recordHistory = true) => {
+    (updater: (draft: MindNode) => void, markContentChanged = true) => {
       setTree((prev) => {
-        if (recordHistory) {
+        if (markContentChanged) {
           setUndoStack((h) => [...h.slice(-45), cloneTree(prev)])
+          setIsDirty(true)
         }
         const draft = cloneTree(prev)
         updater(draft)
@@ -131,7 +117,28 @@ export function AgentMindmap({
     [],
   )
 
+  // 本地开发一键将最新脑图写入 content/mindmap.json
+  const handleSaveToRepo = useCallback(async () => {
+    if (!IS_LOCAL_DEV) return
+    setSaving(true)
+    try {
+      const res = await fetch('/__mindmap/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tree),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      setIsDirty(false)
+      showToast('已保存至 content/mindmap.json，执行 git push 即可发布上线')
+    } catch {
+      showToast('保存失败，请确认处于本地 npm run dev 环境')
+    } finally {
+      setSaving(false)
+    }
+  }, [tree, showToast])
+
   const handleUndo = useCallback(() => {
+    if (!canEdit) return
     setUndoStack((prev) => {
       if (prev.length === 0) {
         showToast('没有可撤销的操作')
@@ -140,12 +147,12 @@ export function AgentMindmap({
       const last = prev[prev.length - 1]
       setTree(last)
       setEditingId(null)
+      setIsDirty(true)
       showToast('已撤销上一步修改')
       return prev.slice(0, -1)
     })
-  }, [showToast])
+  }, [canEdit, showToast])
 
-  // 确保 activeChapterId 与 selectedId 始终有效
   const activeChapterIndex = useMemo(() => {
     const idx = tree.children.findIndex((c) => c.id === activeChapterId)
     return idx >= 0 ? idx : 0
@@ -154,7 +161,9 @@ export function AgentMindmap({
   const activeChapter = tree.children[activeChapterIndex] ?? null
 
   const selectedInfo = useMemo(
-    () => locateNode(selectedId, tree) ?? (activeChapter ? locateNode(activeChapter.id, tree) : null),
+    () =>
+      locateNode(selectedId, tree) ??
+      (activeChapter ? locateNode(activeChapter.id, tree) : null),
     [selectedId, tree, activeChapter],
   )
 
@@ -172,9 +181,9 @@ export function AgentMindmap({
       ? Math.round((globalStats.doneLeaves / globalStats.totalLeaves) * 100)
       : 0
 
-  // 提交当前内联编辑
   const commitInlineEdit = useCallback(
     (targetId: string, textVal: string) => {
+      if (!canEdit) return
       const trimmed = textVal.trim()
       if (trimmed) {
         mutateTree((draft) => {
@@ -186,12 +195,12 @@ export function AgentMindmap({
       }
       setEditingId(null)
     },
-    [mutateTree],
+    [canEdit, mutateTree],
   )
 
-  // 动态添加子节点
   const handleAddChild = useCallback(
     (parentId: string) => {
+      if (!canEdit) return
       if (editingId) commitInlineEdit(editingId, editDraft)
       const newId = generateNodeId()
       const isNewChapter = parentId === 'root'
@@ -223,12 +232,12 @@ export function AgentMindmap({
       setEditDraft(defaultTitle)
       setEditingId(newId)
     },
-    [editingId, editDraft, commitInlineEdit, mutateTree, tree],
+    [canEdit, editingId, editDraft, commitInlineEdit, mutateTree, tree],
   )
 
-  // 动态添加同级节点
   const handleAddSibling = useCallback(
     (targetId: string) => {
+      if (!canEdit) return
       if (editingId) commitInlineEdit(editingId, editDraft)
       const info = locateNode(targetId, tree)
       if (!info || !info.parent) {
@@ -257,11 +266,12 @@ export function AgentMindmap({
       setEditDraft(defaultTitle)
       setEditingId(newId)
     },
-    [editingId, editDraft, commitInlineEdit, tree, handleAddChild, mutateTree],
+    [canEdit, editingId, editDraft, commitInlineEdit, tree, handleAddChild, mutateTree],
   )
 
   const handleStartEdit = useCallback(
     (node: MindNode) => {
+      if (!canEdit) return
       if (editingId && editingId !== node.id) {
         commitInlineEdit(editingId, editDraft)
       }
@@ -269,11 +279,12 @@ export function AgentMindmap({
       setEditDraft(node.text)
       setEditingId(node.id)
     },
-    [editingId, editDraft, commitInlineEdit],
+    [canEdit, editingId, editDraft, commitInlineEdit],
   )
 
   const handleDeleteNode = useCallback(
     (targetId: string) => {
+      if (!canEdit) return
       const info = locateNode(targetId, tree)
       if (!info || !info.parent) {
         showToast('总根节点不可删除')
@@ -304,11 +315,12 @@ export function AgentMindmap({
       setEditingId(null)
       showToast('已删除节点（可按 Ctrl+Z 撤销）')
     },
-    [tree, mutateTree, showToast],
+    [canEdit, tree, mutateTree, showToast],
   )
 
   const handleToggleDone = useCallback(
     (targetId: string) => {
+      if (!canEdit) return
       mutateTree((draft) => {
         const hit = locateNode(targetId, draft)
         if (!hit) return
@@ -320,11 +332,12 @@ export function AgentMindmap({
         applyRec(hit.node)
       })
     },
-    [mutateTree],
+    [canEdit, mutateTree],
   )
 
   const handleCycleTag = useCallback(
     (targetId: string) => {
+      if (!canEdit) return
       mutateTree((draft) => {
         const hit = locateNode(targetId, draft)
         if (!hit) return
@@ -332,9 +345,10 @@ export function AgentMindmap({
         hit.node.tag = TAG_CYCLE[(curIdx + 1) % TAG_CYCLE.length]
       })
     },
-    [mutateTree],
+    [canEdit, mutateTree],
   )
 
+  // 折叠/展开仅属于阅读视图交互，不计入脏数据修改，访客也可自由展开收起
   const handleToggleCollapse = useCallback(
     (targetId: string) => {
       mutateTree((draft) => {
@@ -348,6 +362,7 @@ export function AgentMindmap({
 
   const handleMoveSibling = useCallback(
     (targetId: string, delta: -1 | 1) => {
+      if (!canEdit) return
       const info = locateNode(targetId, tree)
       if (!info || !info.parent) return
       const nextIdx = info.index + delta
@@ -359,17 +374,19 @@ export function AgentMindmap({
         hit.parent.children.splice(nextIdx, 0, moved)
       })
     },
-    [tree, mutateTree],
+    [canEdit, tree, mutateTree],
   )
 
   const handleUpdateNote = useCallback(
     (targetId: string, noteVal: string) => {
+      if (!canEdit) return
       mutateTree((draft) => {
         const hit = locateNode(targetId, draft)
         if (hit) hit.node.note = noteVal
       }, false)
+      setIsDirty(true)
     },
-    [mutateTree],
+    [canEdit, mutateTree],
   )
 
   const handleExpandCollapseChapter = useCallback(
@@ -399,7 +416,8 @@ export function AgentMindmap({
       function walk(items: MindNode[], depth: number) {
         const indent = '  '.repeat(depth)
         for (const item of items) {
-          const check = item.children.length === 0 ? (item.done ? '[x] ' : '[ ] ') : ''
+          const check =
+            item.children.length === 0 ? (item.done ? '[x] ' : '[ ] ') : ''
           const tag = item.tag ? ` \`${item.tag}\`` : ''
           lines.push(`${indent}- ${check}${item.text}${tag}`)
           if (item.note?.trim()) {
@@ -423,20 +441,6 @@ export function AgentMindmap({
     showToast('已导出 AI-Agent-学习脑图.md')
   }, [tree, showToast])
 
-  const handleResetDefault = useCallback(() => {
-    if (!window.confirm('确认恢复默认的 AI Agent 学习脑图吗？当前自定义修改可通过 Ctrl+Z 撤销。')) {
-      return
-    }
-    setUndoStack((h) => [...h.slice(-45), cloneTree(tree)])
-    const fresh = createInitialAgentMindmap()
-    setTree(fresh)
-    setActiveChapterId(fresh.children[0].id)
-    setSelectedId(fresh.children[0].id)
-    setEditingId(null)
-    showToast('已恢复默认 AI Agent 学习图谱')
-  }, [tree, showToast])
-
-  // 搜索定位：自动跳到首个命中的模块
   const normalizedSearch = searchQuery.trim().toLowerCase()
   const handleSearchChange = (val: string) => {
     setSearchQuery(val)
@@ -462,7 +466,6 @@ export function AgentMindmap({
     }
   }
 
-  // 自动聚焦内联输入框
   useEffect(() => {
     if (editingId && editInputRef.current) {
       editInputRef.current.focus()
@@ -471,9 +474,17 @@ export function AgentMindmap({
     }
   }, [editingId])
 
-  // 全局键盘心流快捷键
+  // 全局编辑快捷键仅在本地编辑模式生效
   useEffect(() => {
+    if (!canEdit) return
     const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        if (editingId) commitInlineEdit(editingId, editDraft)
+        void handleSaveToRepo()
+        return
+      }
+
       const activeTag = document.activeElement?.tagName
       if (editingId || activeTag === 'INPUT' || activeTag === 'TEXTAREA') return
 
@@ -504,8 +515,12 @@ export function AgentMindmap({
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [
+    canEdit,
     editingId,
+    editDraft,
     selectedInfo,
+    commitInlineEdit,
+    handleSaveToRepo,
     handleUndo,
     handleAddChild,
     handleAddSibling,
@@ -514,7 +529,6 @@ export function AgentMindmap({
     handleDeleteNode,
   ])
 
-  // 计算当前章节所有可见父子边列表
   const visibleEdges = useMemo<EdgeSpec[]>(() => {
     if (!activeChapter) return []
     const list: EdgeSpec[] = []
@@ -531,7 +545,6 @@ export function AgentMindmap({
     return list
   }, [activeChapter, activeAncestorIds])
 
-  // 实时测量 DOM 几何位置并绘制平滑贝塞尔曲线
   const recomputeSvgCurves = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -576,7 +589,15 @@ export function AgentMindmap({
 
   useLayoutEffect(() => {
     recomputeSvgCurves()
-  }, [recomputeSvgCurves, tree, activeChapterId, selectedId, editingId, hideTags])
+  }, [
+    recomputeSvgCurves,
+    tree,
+    activeChapterId,
+    selectedId,
+    editingId,
+    hideTags,
+    canEdit,
+  ])
 
   useEffect(() => {
     const mountEl = treeMountRef.current
@@ -599,10 +620,9 @@ export function AgentMindmap({
       .includes(normalizedSearch)
   }
 
-  // 递归渲染右侧单章树节点
   const renderSubtreeNode = (node: MindNode, depth: number) => {
     const isSelected = selectedId === node.id
-    const isEditing = editingId === node.id
+    const isEditing = canEdit && editingId === node.id
     const isInActiveChain = activeAncestorIds.has(node.id)
     const matched = isNodeMatched(node)
     const hasChildren = node.children.length > 0
@@ -631,12 +651,13 @@ export function AgentMindmap({
             .join(' ')}
           onClick={(e) => {
             e.stopPropagation()
-            if (editingId && editingId !== node.id) {
+            if (canEdit && editingId && editingId !== node.id) {
               commitInlineEdit(editingId, editDraft)
             }
             setSelectedId(node.id)
           }}
           onDoubleClick={(e) => {
+            if (!canEdit) return
             e.stopPropagation()
             handleStartEdit(node)
           }}
@@ -648,19 +669,28 @@ export function AgentMindmap({
           )}
 
           <div className="mm-node-main">
-            {/* 叶子节点提供轻巧的圆点打卡框 */}
+            {/* 叶子节点状态圆点：线上访客为静态只读展示，本地编辑模式支持点击切换 */}
             {depth >= 2 && isLeaf && (
-              <button
-                type="button"
-                className={`mm-check-dot ${node.done ? 'checked' : ''}`}
-                title="标记已掌握 / 未掌握 (快捷键: Space)"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleToggleDone(node.id)
-                }}
-              >
-                {node.done && <Check size={9} strokeWidth={2.6} />}
-              </button>
+              canEdit ? (
+                <button
+                  type="button"
+                  className={`mm-check-dot ${node.done ? 'checked' : ''}`}
+                  title="标记已掌握 / 未掌握 (Space)"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleToggleDone(node.id)
+                  }}
+                >
+                  {node.done && <Check size={9} strokeWidth={2.6} />}
+                </button>
+              ) : (
+                <span
+                  className={`mm-check-dot readonly ${node.done ? 'checked' : ''}`}
+                  aria-hidden="true"
+                >
+                  {node.done && <Check size={9} strokeWidth={2.6} />}
+                </span>
+              )
             )}
 
             {isEditing ? (
@@ -702,11 +732,15 @@ export function AgentMindmap({
             {!hideTags && !isEditing && node.tag && (
               <span
                 className={`mm-tag ${node.tag === '必修' || node.tag === '重点' ? 'mm-tag-accent' : ''}`}
-                title="点击切换标签"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleCycleTag(node.id)
-                }}
+                title={canEdit ? '点击切换标签' : undefined}
+                onClick={
+                  canEdit
+                    ? (e) => {
+                        e.stopPropagation()
+                        handleCycleTag(node.id)
+                      }
+                    : undefined
+                }
               >
                 {node.tag}
               </span>
@@ -718,7 +752,6 @@ export function AgentMindmap({
               </span>
             )}
 
-            {/* 折叠数量胶囊 */}
             {depth >= 2 && hasChildren && node.collapsed && (
               <button
                 type="button"
@@ -734,8 +767,7 @@ export function AgentMindmap({
             )}
           </div>
 
-          {/* 悬停时右侧浮现的极简快捷动作 */}
-          {!isEditing && (
+          {!isEditing && (canEdit || (depth >= 2 && hasChildren && !node.collapsed)) && (
             <span className="mm-hover-tools">
               {depth >= 2 && hasChildren && !node.collapsed && (
                 <button
@@ -750,22 +782,23 @@ export function AgentMindmap({
                   −
                 </button>
               )}
-              <button
-                type="button"
-                className="mm-plus-btn"
-                title="新增子节点 (Tab)"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleAddChild(node.id)
-                }}
-              >
-                +
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  className="mm-plus-btn"
+                  title="新增子节点 (Tab)"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleAddChild(node.id)
+                  }}
+                >
+                  +
+                </button>
+              )}
             </span>
           )}
         </div>
 
-        {/* 子树列 */}
         {!node.collapsed && hasChildren && (
           <div className="mm-children-stack">
             {node.children.map((child) => renderSubtreeNode(child, depth + 1))}
@@ -784,13 +817,17 @@ export function AgentMindmap({
 
   return (
     <div className="mm-page">
-      {/* 顶部社论风页头 */}
       <header className="mm-header">
         <div className="mm-header-left">
           <div className="mm-eyebrow-row">
             <span className="section-index" style={{ margin: 0 }}>
               KNOWLEDGE ATLAS / 03
             </span>
+            {IS_LOCAL_DEV && (
+              <span className="mm-dev-pill">
+                {canEdit ? 'LOCAL EDIT · 本地编辑模式' : 'READONLY PREVIEW · 访客视角'}
+              </span>
+            )}
             {onBackToArticles && (
               <button
                 type="button"
@@ -804,14 +841,16 @@ export function AgentMindmap({
           </div>
           <h1>{tree.text}</h1>
           <p className="mm-subtitle">
-            左纲右树交互工作台：左侧把控全局模块脉络，右侧舒展深挖单章知识树，支持随时动态生长节点与本地自动保存。
+            {canEdit
+              ? '当前处于本地开发编辑模式：支持随时增删节点、打卡进度与记录笔记，按 Ctrl+S 直接写回 content/mindmap.json。'
+              : '按八大核心模块系统梳理的 AI Agent 学习路径与实践批注。点击左侧切换章节，点选任意节点可高亮完整知识链路。'}
           </p>
         </div>
 
         <div className="mm-header-right">
           <div className="mm-progress-box">
             <div className="mm-progress-meta">
-              <span>学习点亮进度</span>
+              <span>当前点亮进度</span>
               <strong>
                 {globalStats.doneLeaves} / {globalStats.totalLeaves} ({masteryPct}%)
               </strong>
@@ -831,7 +870,7 @@ export function AgentMindmap({
                 type="search"
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="定位知识点…"
+                placeholder="搜索知识点…"
                 aria-label="搜索脑图节点"
               />
               {searchQuery && (
@@ -852,15 +891,7 @@ export function AgentMindmap({
             >
               {hideTags ? '显示标签' : '纯净视图'}
             </button>
-            <button
-              type="button"
-              className="mm-ctrl-btn"
-              onClick={handleUndo}
-              disabled={undoStack.length === 0}
-              title="撤销上一步 (Ctrl+Z)"
-            >
-              撤销
-            </button>
+
             <button
               type="button"
               className="mm-ctrl-btn"
@@ -868,20 +899,53 @@ export function AgentMindmap({
             >
               导出 MD
             </button>
-            <button
-              type="button"
-              className="mm-ctrl-btn"
-              onClick={handleResetDefault}
-            >
-              重置
-            </button>
+
+            {IS_LOCAL_DEV && (
+              <>
+                <button
+                  type="button"
+                  className={`mm-ctrl-btn ${previewReadonly ? 'is-on' : ''}`}
+                  onClick={() => {
+                    setEditingId(null)
+                    setPreviewReadonly((v) => !v)
+                  }}
+                >
+                  {previewReadonly ? '退出只读预览' : '预览访客视角'}
+                </button>
+                {canEdit && (
+                  <>
+                    <button
+                      type="button"
+                      className="mm-ctrl-btn"
+                      onClick={handleUndo}
+                      disabled={undoStack.length === 0}
+                      title="撤销上一步 (Ctrl+Z)"
+                    >
+                      撤销
+                    </button>
+                    <button
+                      type="button"
+                      className={`mm-ctrl-btn ${isDirty ? 'mm-save-dirty' : ''}`}
+                      onClick={() => void handleSaveToRepo()}
+                      disabled={saving}
+                      title="直接写入 content/mindmap.json (快捷键 Ctrl+S)"
+                    >
+                      {saving
+                        ? '保存中…'
+                        : isDirty
+                          ? '保存至源码 *'
+                          : '已同步源码'}
+                    </button>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
       </header>
 
-      {/* 核心「左纲右树」建筑线框工作台 */}
+      {/* 左纲右树主体 */}
       <div className="mm-workbench">
-        {/* 左侧：全局八大模块总纲目录 */}
         <aside className="mm-outline-rail" aria-label="模块总纲">
           <div className="mm-rail-head">
             <span>MODULES · 模块总纲</span>
@@ -913,11 +977,13 @@ export function AgentMindmap({
                     .filter(Boolean)
                     .join(' ')}
                   onClick={() => {
-                    if (editingId) commitInlineEdit(editingId, editDraft)
+                    if (canEdit && editingId) commitInlineEdit(editingId, editDraft)
                     setActiveChapterId(ch.id)
                     setSelectedId(ch.id)
                   }}
-                  onDoubleClick={() => handleStartEdit(ch)}
+                  onDoubleClick={() => {
+                    if (canEdit) handleStartEdit(ch)
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       setActiveChapterId(ch.id)
@@ -942,23 +1008,23 @@ export function AgentMindmap({
             })}
           </div>
 
-          <div className="mm-rail-foot">
-            <button
-              type="button"
-              className="mm-add-chapter-btn"
-              onClick={() => handleAddChild('root')}
-            >
-              + 新增一级模块
-            </button>
-          </div>
+          {canEdit && (
+            <div className="mm-rail-foot">
+              <button
+                type="button"
+                className="mm-add-chapter-btn"
+                onClick={() => handleAddChild('root')}
+              >
+                + 新增一级模块
+              </button>
+            </div>
+          )}
         </aside>
 
-        {/* 右侧：当前模块舒展知识树画布 */}
         <div className="mm-stage-col">
-          {/* 画布顶部轻信息条 */}
           <div className="mm-stage-topbar">
             <div className="mm-stage-crumb">
-              <span>当前展开：</span>
+              <span>当前模块：</span>
               <strong>
                 {String(activeChapterIndex + 1).padStart(2, '0')} ·{' '}
                 {activeChapter?.text}
@@ -973,15 +1039,18 @@ export function AgentMindmap({
               >
                 {anyDeepExpanded ? '收起三级细项' : '展开全部层级'}
               </button>
-              <span className="mm-sep">·</span>
-              <span className="mm-kbd-hint">
-                <kbd>Tab</kbd> 子节点 <kbd>Enter</kbd> 同级 <kbd>Space</kbd> 打卡{' '}
-                <kbd>双击</kbd> 编辑
-              </span>
+              {canEdit && (
+                <>
+                  <span className="mm-sep">·</span>
+                  <span className="mm-kbd-hint">
+                    <kbd>Tab</kbd> 子节点 <kbd>Enter</kbd> 同级 <kbd>Space</kbd>{' '}
+                    打卡 <kbd>Ctrl+S</kbd> 存源码
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
-          {/* 树状图绘制视口 */}
           <div
             ref={canvasRef}
             className="mm-tree-viewport"
@@ -1020,8 +1089,21 @@ export function AgentMindmap({
             </div>
           </div>
 
-          {/* 选中节点备注编辑抽屉条（按需展开，平时隐藏保持干净） */}
-          {selectedInfo && (noteOpen || selectedInfo.node.note?.trim()) && (
+          {/* 只读模式下：若选中节点有作者笔记，安静展示只读批注条 */}
+          {!canEdit && selectedInfo?.node.note?.trim() && (
+            <div className="mm-note-strip readonly">
+              <span className="mm-note-label">
+                <PenLine size={12} />
+                <span>实践批注：</span>
+              </span>
+              <span className="mm-note-readonly-text">
+                {selectedInfo.node.note}
+              </span>
+            </div>
+          )}
+
+          {/* 本地编辑模式下：可编辑笔记输入条与上下文操作坞 */}
+          {canEdit && selectedInfo && (noteOpen || selectedInfo.node.note?.trim()) && (
             <div className="mm-note-strip">
               <span className="mm-note-label">
                 <PenLine size={12} />
@@ -1048,8 +1130,7 @@ export function AgentMindmap({
             </div>
           )}
 
-          {/* 底部安静的上下文操作栏 */}
-          {selectedInfo && (
+          {canEdit && selectedInfo && (
             <footer className="mm-context-bar">
               <div className="mm-ctx-selected">
                 <span className="mm-ctx-dot" />

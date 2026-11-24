@@ -1,0 +1,373 @@
+{
+  "id": "root",
+  "text": "AI Agent 全景学习图谱",
+  "children": [
+    {
+      "id": "ch-1",
+      "text": "理论基石与认知对齐",
+      "tag": "必修",
+      "children": [
+        {
+          "id": "ch-1-1",
+          "text": "核心架构心智模型",
+          "children": [
+            {
+              "id": "ch-1-1-1",
+              "text": "Agent = LLM + 规划 (Planning) + 记忆 (Memory) + 工具 (Tools)",
+              "tag": "重点",
+              "done": true,
+              "note": "源自 Lilian Weng 经典综述 LLM Powered Autonomous Agents",
+              "children": []
+            },
+            {
+              "id": "ch-1-1-2",
+              "text": "演进阶梯：Prompt ➔ RAG ➔ Workflow ➔ Autonomous Agent",
+              "done": true,
+              "children": []
+            },
+            {
+              "id": "ch-1-1-3",
+              "text": "认知双系统映射：System 1 快直觉与 System 2 慢推理",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "ch-1-2",
+          "text": "LLM 底座前置必修",
+          "children": [
+            {
+              "id": "ch-1-2-1",
+              "text": "Context 窗口注意力分布（Lost in the Middle）与 Token 经济学",
+              "children": []
+            },
+            {
+              "id": "ch-1-2-2",
+              "text": "结构化可靠输出：JSON Schema 与 Strict Mode 约束解码",
+              "tag": "必修",
+              "done": true,
+              "children": []
+            },
+            {
+              "id": "ch-1-2-3",
+              "text": "模型幻觉边界识别与采样参数（Temperature / Top-P）调优",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ch-2",
+      "text": "规划与推理范式 (Planning)",
+      "tag": "重点",
+      "children": [
+        {
+          "id": "ch-2-1",
+          "text": "单步与循环决策闭环",
+          "tag": "必修",
+          "children": [
+            {
+              "id": "ch-2-1-1",
+              "text": "ReAct 循环：Thought ➔ Action ➔ Observation 动态交织",
+              "tag": "必修",
+              "note": "最核心基础范式，建议不依赖框架手写一遍完整循环",
+              "children": []
+            },
+            {
+              "id": "ch-2-1-2",
+              "text": "Plan-and-Solve：先全局拆解子目标，再逐项执行与重规划",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "ch-2-2",
+          "text": "自我反思与高阶树搜索",
+          "children": [
+            {
+              "id": "ch-2-2-1",
+              "text": "Reflexion：利用外部报错反馈进行自我归因与纠偏",
+              "tag": "重点",
+              "children": []
+            },
+            {
+              "id": "ch-2-2-2",
+              "text": "ToT / GoT：思维树多路径展开、评估打分与回溯剪枝",
+              "children": []
+            },
+            {
+              "id": "ch-2-2-3",
+              "text": "LATS：语言智能体融合蒙特卡洛树搜索 (MCTS)",
+              "tag": "前沿",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ch-3",
+      "text": "记忆系统与知识增强 (Memory)",
+      "tag": "必修",
+      "children": [
+        {
+          "id": "ch-3-1",
+          "text": "短期工作台记忆 (Short-Term)",
+          "children": [
+            {
+              "id": "ch-3-1-1",
+              "text": "滑动窗口裁剪与多轮历史摘要压缩 (Summary Buffer)",
+              "children": []
+            },
+            {
+              "id": "ch-3-1-2",
+              "text": "Scratchpad 工作草稿纸与显式状态机对象维护",
+              "tag": "重点",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "ch-3-2",
+          "text": "长期持久记忆 (Long-Term)",
+          "tag": "重点",
+          "children": [
+            {
+              "id": "ch-3-2-1",
+              "text": "Agentic RAG：自主查询改写、路由检索与相关性自检",
+              "tag": "必修",
+              "children": []
+            },
+            {
+              "id": "ch-3-2-2",
+              "text": "情景与偏好记忆：Mem0 / Letta 动态记忆提取与遗忘更新",
+              "tag": "前沿",
+              "children": []
+            },
+            {
+              "id": "ch-3-2-3",
+              "text": "知识图谱记忆：GraphRAG 多跳实体关系构建与推理",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ch-4",
+      "text": "工具调用与环境交互 (Tools)",
+      "tag": "必修",
+      "children": [
+        {
+          "id": "ch-4-1",
+          "text": "工具连接标准协议",
+          "children": [
+            {
+              "id": "ch-4-1-1",
+              "text": "Function Calling / Tool Use 描述工程与容错重试",
+              "tag": "必修",
+              "children": []
+            },
+            {
+              "id": "ch-4-1-2",
+              "text": "MCP 协议：Model Context Protocol 客户端与 Server 开发",
+              "tag": "重点",
+              "note": "重点掌握 Resources / Prompts / Tools 三大原语及传输机制",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "ch-4-2",
+          "text": "沙箱执行与真实世界交互",
+          "tag": "实战",
+          "children": [
+            {
+              "id": "ch-4-2-1",
+              "text": "安全代码执行沙箱：E2B / Docker / Pyodide 隔离环境",
+              "tag": "实战",
+              "children": []
+            },
+            {
+              "id": "ch-4-2-2",
+              "text": "浏览器与 GUI 自动化：Playwright / Computer Use 视觉操作",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ch-5",
+      "text": "工作流模式与主流框架",
+      "tag": "重点",
+      "children": [
+        {
+          "id": "ch-5-1",
+          "text": "Anthropic 五大黄金编排模式",
+          "tag": "必修",
+          "children": [
+            {
+              "id": "ch-5-1-1",
+              "text": "Prompt Chaining 串行提示链 & Routing 意图分流",
+              "children": []
+            },
+            {
+              "id": "ch-5-1-2",
+              "text": "Parallelization 并行投票 & Orchestrator-Workers 主从拆解",
+              "children": []
+            },
+            {
+              "id": "ch-5-1-3",
+              "text": "Evaluator-Optimizer 生成器-评审器闭环迭代优化",
+              "tag": "重点",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "ch-5-2",
+          "text": "工业级工程框架选型",
+          "children": [
+            {
+              "id": "ch-5-2-1",
+              "text": "LangGraph：图状态机、循环控制、时间旅行与持久化断点",
+              "tag": "重点",
+              "children": []
+            },
+            {
+              "id": "ch-5-2-2",
+              "text": "CrewAI / AutoGen / OpenAI Agents SDK 对比实践",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ch-6",
+      "text": "多智能体协同 (Multi-Agent)",
+      "children": [
+        {
+          "id": "ch-6-1",
+          "text": "协作拓扑架构",
+          "children": [
+            {
+              "id": "ch-6-1-1",
+              "text": "Supervisor 中心化总控调度 vs Handoffs 去中心化交接",
+              "tag": "重点",
+              "children": []
+            },
+            {
+              "id": "ch-6-1-2",
+              "text": "SOP 标准化角色流水线协同（如软件工程团队分工）",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "ch-6-2",
+          "text": "协同稳定性与上下文治理",
+          "children": [
+            {
+              "id": "ch-6-2-1",
+              "text": "Shared Blackboard 共享状态黑板与子 Agent 上下文隔离",
+              "children": []
+            },
+            {
+              "id": "ch-6-2-2",
+              "text": "通信风暴抑制、共识收敛与死循环最大轮次熔断",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ch-7",
+      "text": "评测、观测与安全护栏 (AgentOps)",
+      "children": [
+        {
+          "id": "ch-7-1",
+          "text": "全链路可观测与基准评测",
+          "children": [
+            {
+              "id": "ch-7-1-1",
+              "text": "调用轨迹追踪 (Tracing)：LangSmith / Arize Phoenix / OTel",
+              "tag": "必修",
+              "children": []
+            },
+            {
+              "id": "ch-7-1-2",
+              "text": "权威评测集建设：SWE-bench / GAIA / τ-bench 端到端回归",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "ch-7-2",
+          "text": "生产级安全与人机协同",
+          "children": [
+            {
+              "id": "ch-7-2-1",
+              "text": "Human-in-the-Loop 高危写操作人工审批中断与恢复",
+              "tag": "重点",
+              "children": []
+            },
+            {
+              "id": "ch-7-2-2",
+              "text": "间接 Prompt 注入防御、最小权限原则与成本预算熔断",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ch-8",
+      "text": "四阶实战通关项目",
+      "tag": "实战",
+      "children": [
+        {
+          "id": "ch-8-1",
+          "text": "阶段一：底层原理与工具连接",
+          "tag": "实战",
+          "children": [
+            {
+              "id": "ch-8-1-1",
+              "text": "Lv1 · 零框架 100 行 TypeScript/Python 手写 ReAct 搜索助手",
+              "tag": "实战",
+              "children": []
+            },
+            {
+              "id": "ch-8-1-2",
+              "text": "Lv2 · 开发自定义 MCP Server 接入个人博客与本地笔记库",
+              "tag": "实战",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "ch-8-2",
+          "text": "阶段二：复杂状态编排与生产闭环",
+          "tag": "实战",
+          "children": [
+            {
+              "id": "ch-8-2-1",
+              "text": "Lv3 · 基于 LangGraph 的自动运行单测并修复报错 Coding Agent",
+              "tag": "实战",
+              "children": []
+            },
+            {
+              "id": "ch-8-2-2",
+              "text": "Lv4 · 带评测基准与人工审批节点的深度竞品调研多智能体系统",
+              "tag": "实战",
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

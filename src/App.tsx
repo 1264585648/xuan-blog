@@ -12,8 +12,7 @@ import {
 import { AgentMindmap } from './AgentMindmap'
 import {
   countTreeStats,
-  createInitialAgentMindmap,
-  MINDMAP_STORAGE_KEY,
+  getPublishedMindmap,
   type MindNode,
 } from './mindmapData'
 import {
@@ -52,21 +51,7 @@ function App() {
   >(() => (window.location.hash === '#mindmap' ? 'mindmap' : 'articles'))
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
   const [mindmapSummary, setMindmapSummary] = useState(() => {
-    try {
-      const raw = localStorage.getItem(MINDMAP_STORAGE_KEY)
-      if (raw) {
-        const parsed = JSON.parse(raw) as MindNode
-        if (parsed && parsed.id === 'root' && Array.isArray(parsed.children)) {
-          return {
-            modules: parsed.children.length,
-            ...countTreeStats(parsed),
-          }
-        }
-      }
-    } catch {
-      // fallback
-    }
-    const def = createInitialAgentMindmap()
+    const def = getPublishedMindmap()
     return {
       modules: def.children.length,
       ...countTreeStats(def),
@@ -568,9 +553,9 @@ function App() {
             <div className="block-header">
               <div>
                 <p className="section-index">KNOWLEDGE ATLAS / 03</p>
-                <h2>交互式知识脑图</h2>
+                <h2>知识脑图</h2>
               </div>
-              <span className="block-note">左纲右树 · 支持动态生长节点与本地持久化</span>
+              <span className="block-note">左纲右树 · 结构化学习路径与实践批注</span>
             </div>
 
             <div
@@ -588,11 +573,11 @@ function App() {
               <div className="atlas-callout-main">
                 <div className="atlas-callout-badge">
                   <GitBranch size={13} />
-                  <span>LIVING MINDMAP · 持续演进</span>
+                  <span>LIVING MINDMAP · 持续更新</span>
                 </div>
                 <h3>AI Agent 全景学习图谱</h3>
                 <p>
-                  涵盖理论基石、规划推理（ReAct / Reflexion / ToT）、多级记忆架构、MCP 工具协议、LangGraph 编排及生产级 AgentOps 评测体系。采用「左纲右树」零拖拽布局，可直接在浏览器中新增、打卡与批注节点。
+                  按八大核心模块梳理理论基石、规划推理（ReAct / Reflexion / ToT）、多级记忆架构、MCP 工具协议、LangGraph 编排及 AgentOps 评测体系，同步记录个人学习点亮进度与实践笔记。
                 </p>
               </div>
 
@@ -603,14 +588,14 @@ function App() {
                     <strong>{mindmapSummary.modules} 章</strong>
                   </div>
                   <div>
-                    <small>已点亮进度</small>
+                    <small>点亮进度</small>
                     <strong>
                       {mindmapSummary.doneLeaves}/{mindmapSummary.totalLeaves}
                     </strong>
                   </div>
                 </div>
                 <span className="atlas-enter-btn">
-                  进入交互脑图 →
+                  浏览知识脑图 →
                 </span>
               </div>
             </div>

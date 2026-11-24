@@ -1224,9 +1224,27 @@ button {
 
 .mm-eyebrow-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 8px;
+}
+
+.mm-dev-pill {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.mm-save-dirty {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--surface) !important;
+  font-weight: 600;
 }
 
 .mm-back-link {
@@ -1748,8 +1766,18 @@ button {
   transition: all 0.14s ease;
 }
 
-.mm-check-dot:hover {
+.mm-check-dot:hover:not(.readonly) {
   border-color: var(--accent);
+}
+
+.mm-check-dot.readonly {
+  cursor: default;
+  pointer-events: none;
+}
+
+.mm-note-readonly-text {
+  color: var(--ink-secondary);
+  line-height: 1.5;
 }
 
 .mm-check-dot.checked {
