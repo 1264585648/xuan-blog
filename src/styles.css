@@ -640,6 +640,10 @@ button {
   gap: 1px;
 }
 
+.hairline-grid.shelves-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .hairline-cell {
   display: flex;
   flex-direction: column;
@@ -889,6 +893,15 @@ button {
   color: var(--ink-secondary);
 }
 
+.prose-quote {
+  margin: 14px 0;
+  padding: 10px 16px;
+  border-left: 3px solid var(--accent);
+  background: var(--bg);
+  color: var(--ink-secondary);
+  font-size: 14px;
+}
+
 .prose-section ul {
   margin: 12px 0 16px;
   padding-left: 18px;
@@ -1018,7 +1031,8 @@ button {
     padding-top: 16px;
     border-top: 1px solid var(--line);
   }
-  .hairline-grid {
+  .hairline-grid,
+  .hairline-grid.shelves-grid {
     grid-template-columns: 1fr;
   }
 }

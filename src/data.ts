@@ -9,7 +9,7 @@ export type PostSection = {
   }
 }
 
-export type PostCategory = '前端' | '设计' | '工程' | '随笔'
+export type PostCategory = '后端' | 'Agent' | '服务器' | 'AI 订阅'
 
 export type Post = {
   id: string
@@ -47,52 +47,59 @@ export type ProjectItem = {
   repoUrl: string
 }
 
-export const categories = ['全部', '前端', '设计', '工程', '随笔'] as const
+export const categories = ['全部', '后端', 'Agent', '服务器', 'AI 订阅'] as const
 
 export const shelves: Shelf[] = [
   {
-    id: 'ui-engineering',
+    id: 'backend-arch',
     index: '01',
-    title: '界面工程与组件设计',
-    description: '关注无障碍交互、键盘导航、焦点管理与基础组件库的实现细节。',
-    count: 3,
+    title: '后端架构与高可用实践',
+    description: '聚焦高并发读写链路、幂等与分布式锁、数据库慢查询治理及缓存一致性经验。',
+    count: 2,
   },
   {
-    id: 'typography-tokens',
+    id: 'agent-engineering',
     index: '02',
-    title: '设计系统与排版细节',
-    description: '记录 CSS 变量分层、深浅色对比度调校，以及中西文混排的视觉规范。',
-    count: 3,
+    title: 'AI Agent 工程与协议落地',
+    description: '从手写 ReAct 循环、MCP 工具协议封装到多智能体状态机与生产级安全护栏。',
+    count: 2,
   },
   {
-    id: 'indie-notes',
+    id: 'server-infra',
     index: '03',
-    title: '开发复盘与日常记录',
-    description: '业余项目的踩坑总结、工具链简化过程，以及每年的阅读记录。',
-    count: 3,
+    title: '服务器运维与边缘基建',
+    description: '记录 Linux 服务器安全加固、Docker 容器编排、反向代理与 Cloudflare 边缘部署。',
+    count: 2,
+  },
+  {
+    id: 'ai-subscriptions',
+    index: '04',
+    title: 'AI 订阅实测与工具配比',
+    description: '深度横评 Claude、ChatGPT、Gemini 与主流编程工具订阅，梳理最高性价比模型分流方案。',
+    count: 2,
   },
 ]
 
 export const projects: ProjectItem[] = [
   {
     name: 'xuan-blog',
-    year: '2025',
-    description: '当前个人网站源码，基于 React + TypeScript + Vite 构建的极简静态博客。',
-    stack: ['React', 'TypeScript', 'Markdown'],
+    year: '2026',
+    description: '个人技术博客与交互式 AI Agent 全景学习脑图，基于静态构建配合边缘网络自动发布。',
+    stack: ['TypeScript', 'React', 'Cloudflare Pages'],
     repoUrl: 'https://github.com/1264585648/xuan-blog',
   },
   {
-    name: 'paper-tokens',
-    year: '2024',
-    description: '面向长文阅读的网页色彩与中西文混排 CSS 变量规范。',
-    stack: ['CSS Variables', 'Typography'],
+    name: 'agent-mcp-toolkit',
+    year: '2026',
+    description: '面向后端研发排障场景的轻量 MCP Server 集合，支持只读库表诊断、慢日志聚合与链路检索。',
+    stack: ['MCP', 'Python', 'AgentOps'],
     repoUrl: 'https://github.com/1264585648',
   },
   {
-    name: 'cmdk-lite',
-    year: '2024',
-    description: '零外部依赖、支持中文输入法合成事件处理的轻量级命令面板组件。',
-    stack: ['TypeScript', 'A11y'],
+    name: 'server-bootstrap',
+    year: '2025',
+    description: '个人云服务器开箱初始化脚本与 Docker Compose 模板库，内置防火墙规则、证书续签与状态告警。',
+    stack: ['Docker', 'Linux', 'Nginx'],
     repoUrl: 'https://github.com/1264585648',
   },
 ]
@@ -189,9 +196,9 @@ const allParsedPosts: Post[] = Object.entries(markdownFiles)
     const [, month = '01', day = '01'] = date.split('-')
     const shortDate = `${month}.${day}`
     const category = (
-      ['前端', '设计', '工程', '随笔'].includes(meta.category)
+      ['后端', 'Agent', '服务器', 'AI 订阅'].includes(meta.category)
         ? meta.category
-        : '随笔'
+        : '后端'
     ) as PostCategory
     const tags = meta.tags
       ? meta.tags

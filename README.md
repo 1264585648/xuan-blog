@@ -1,6 +1,8 @@
-# Xuan Blog
+# 朱轩 · Xuan Blog
 
-基于 React + TypeScript + Vite 构建的极简中文个人博客，支持通过 `content/posts/*.md` 编写 Markdown 文章并配合 Cloudflare Pages 自动构建发布。
+> 访问地址：[https://blog.vibe-show.com](https://blog.vibe-show.com)（通过 vibe-show 边缘反代驱动，源站托管于 Cloudflare Pages）
+
+围绕**后端架构、AI Agent 工程、服务器基建与主流 AI 订阅实测**构建的极简个人技术博客，内置「左纲右树」交互式知识脑图，支持通过 `content/posts/*.md` 编写 Markdown 文章并配合 Cloudflare Pages 自动构建发布。
 
 ## 本地开发
 
@@ -22,13 +24,13 @@ npm run build
 ```markdown
 ---
 title: 文章标题
-date: 2025-04-01
-category: 前端
-tags: React, 架构
+date: 2026-06-01
+category: 后端
+tags: 分布式, MySQL
 summary: 一句话摘要说明
 featured: true
-shelfId: ui-engineering
-relatedIds: state-management-boundaries
+shelfId: backend-arch
+relatedIds: mysql-slow-query-and-cache-consistency
 ---
 
 这里是正文段落……

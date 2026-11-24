@@ -192,7 +192,7 @@ function App() {
           }}
         >
           <span className="brand-dot" />
-          <span>周轩 · Xuan</span>
+          <span>朱轩 · Xuan</span>
         </a>
         <div className="mobile-bar-actions">
           <button
@@ -229,7 +229,7 @@ function App() {
               }}
             >
               <span className="brand-dot" />
-              <span>周轩 · Xuan</span>
+              <span>朱轩 · Xuan</span>
             </a>
             <button
               className="icon-btn sidebar-close"
@@ -240,9 +240,9 @@ function App() {
               <X size={17} />
             </button>
           </div>
-          <p className="sidebar-role">Frontend Engineer</p>
+          <p className="sidebar-role">Backend &amp; Agent Engineer</p>
           <p className="sidebar-bio">
-            关注前端架构、设计系统与界面工程。这里用来存放平时的技术笔记、代码实验和开发复盘。
+            专注后端服务架构、AI Agent 工程落地与自建服务器基建。这里用来沉淀平时的架构复盘、运维折腾手记与主流 AI 订阅实测。
           </p>
         </div>
 
@@ -388,16 +388,16 @@ function App() {
               <p className="section-index">INDEX / ARCHIVE</p>
               <h1>笔记与归档</h1>
               <p className="header-sub">
-                按时间倒序整理的技术长文、组件设计与日常思考。
+                按时间倒序整理的后端架构、AI Agent 实践、服务器基建与 AI 订阅实测。
               </p>
             </div>
             <div className="header-right">
               <div className="now-brief">
                 <span className="now-dot-label">
-                  <i className="live-dot" /> 近况 · 2025 春
+                  <i className="live-dot" /> 近况 · 2026
                 </span>
                 <p>
-                  近期在整理设计系统 Token 规范与前端状态拆分实践，业余时间维护几款轻量开源小工具。
+                  近期在打磨面向后端研发场景的 MCP 工具链与多智能体编排，顺手折腾边缘网络反代及手头几家主力 AI 订阅方案的配比优化。
                 </p>
               </div>
             </div>
@@ -512,10 +512,10 @@ function App() {
                 <p className="section-index">TOPICS / 02</p>
                 <h2>专题整理</h2>
               </div>
-              <span className="block-note">按主题归类的系列笔记</span>
+              <span className="block-note">围绕四大核心技术方向归类的系列笔记</span>
             </div>
 
-            <div className="hairline-grid">
+            <div className="hairline-grid shelves-grid">
               {shelves.map((shelf) => {
                 const shelfPosts = flatPosts.filter(
                   (p) => p.shelfId === shelf.id,
@@ -663,32 +663,31 @@ function App() {
             <div className="about-columns">
               <div className="about-col">
                 <p>
-                  我是周轩，一名前端工程师。日常工作围绕 React、TypeScript
-                  与设计系统展开，喜欢研究直观、耐看且响应迅速的用户界面。
+                  我是朱轩，一名后端工程师，日常工作围绕高可用服务端架构、分布式存储与 AI Agent 工程化落地展开。业余喜欢在自己的云服务器上折腾容器编排与边缘网络，也长期实测对比各类主流大模型与 AI 编程订阅服务。
                 </p>
                 <p>
-                  这个网站参考了 Tania Rascia 的信息结构：去掉不必要的视觉装饰，把重心放在清晰的目录检索和舒适的中文长文阅读体验上。
+                  这个博客坚持极简纯静态架构：通过本地 Markdown 写作配合 Git 推送自动构建发布，去掉后台维护负担，把重心放在清晰的分类检索、结构化知识脑图与沉浸阅读体验上。
                 </p>
               </div>
               <div className="about-col about-meta-list">
                 <div className="meta-row">
                   <span>关注方向</span>
-                  <strong>组件架构 / 字体排印 / 本地优先软件</strong>
+                  <strong>后端架构 / AI Agent / 服务器基建 / AI 订阅流</strong>
                 </div>
                 <div className="meta-row">
                   <span>常用技术</span>
-                  <strong>TypeScript, React, CSS Tokens, Node.js</strong>
+                  <strong>Java · Go · Python, MySQL &amp; Redis, Docker, Linux, MCP</strong>
                 </div>
                 <div className="meta-row">
-                  <span>联系方式</span>
-                  <strong>hello@example.com · GitHub @1264585648</strong>
+                  <span>站点与仓库</span>
+                  <strong>blog.vibe-show.com · GitHub @1264585648</strong>
                 </div>
               </div>
             </div>
           </section>
 
           <footer className="footer">
-            <span>© 2025 周轩 (Xuan). All rights reserved.</span>
+            <span>© 2026 朱轩 (Xuan). All rights reserved.</span>
             <div className="footer-links">
               <a href="#top">回到顶部 ↑</a>
               <a
@@ -760,6 +759,9 @@ function App() {
                     {sec.paragraphs.map((p, pIdx) => (
                       <p key={pIdx}>{p}</p>
                     ))}
+                    {sec.quote && (
+                      <blockquote className="prose-quote">{sec.quote}</blockquote>
+                    )}
                     {sec.bullets && (
                       <ul>
                         {sec.bullets.map((b, bIdx) => (
