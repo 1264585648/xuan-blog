@@ -2,12 +2,20 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
   ArrowUpRight,
+  GitBranch,
   Menu,
   Moon,
   Search,
   Sun,
   X,
 } from './icons'
+import { AgentMindmap } from './AgentMindmap'
+import {
+  countTreeStats,
+  createInitialAgentMindmap,
+  MINDMAP_STORAGE_KEY,
+  type MindNode,
+} from './mindmapData'
 import {
   categories,
   postGroups,
@@ -40,9 +48,56 @@ function App() {
   const [query, setQuery] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeNav, setActiveNav] = useState<
-    'articles' | 'shelves' | 'projects' | 'about'
-  >('articles')
+    'articles' | 'shelves' | 'mindmap' | 'projects' | 'about'
+  >(() => (window.location.hash === '#mindmap' ? 'mindmap' : 'articles'))
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
+  const [mindmapSummary, setMindmapSummary] = useState(() => {
+    try {
+      const raw = localStorage.getItem(MINDMAP_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as MindNode
+        if (parsed && parsed.id === 'root' && Array.isArray(parsed.children)) {
+          return {
+            modules: parsed.children.length,
+            ...countTreeStats(parsed),
+          }
+        }
+      }
+    } catch {
+      // fallback
+    }
+    const def = createInitialAgentMindmap()
+    return {
+      modules: def.children.length,
+      ...countTreeStats(def),
+    }
+  })
+
+  const handleMindmapChange = (root: MindNode) => {
+    setMindmapSummary({
+      modules: root.children.length,
+      ...countTreeStats(root),
+    })
+  }
+
+  const navigateSection = (
+    target: 'articles' | 'shelves' | 'mindmap' | 'projects' | 'about',
+  ) => {
+    const wasMindmap = activeNav === 'mindmap'
+    setActiveNav(target)
+    setMenuOpen(false)
+    if (target === 'mindmap') {
+      window.history.replaceState(null, '', '#mindmap')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      window.history.replaceState(null, '', `#${target}`)
+      if (wasMindmap) {
+        requestAnimationFrame(() => {
+          document.getElementById(target)?.scrollIntoView({ behavior: 'smooth' })
+        })
+      }
+    }
+  }
 
   const searchInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -129,7 +184,13 @@ function App() {
     >
       {/* MOBILE HEADER ONLY */}
       <header className="mobile-bar">
-        <a className="brand" href="#top">
+        <a
+          className="brand"
+          href="#top"
+          onClick={() => {
+            if (activeNav === 'mindmap') navigateSection('articles')
+          }}
+        >
           <span className="brand-dot" />
           <span>周轩 · Xuan</span>
         </a>
@@ -162,7 +223,10 @@ function App() {
             <a
               className="brand"
               href="#top"
-              onClick={() => setMenuOpen(false)}
+              onClick={() => {
+                if (activeNav === 'mindmap') navigateSection('articles')
+                else setMenuOpen(false)
+              }}
             >
               <span className="brand-dot" />
               <span>周轩 · Xuan</span>
@@ -186,9 +250,9 @@ function App() {
           <a
             className={`nav-item ${activeNav === 'articles' ? 'active' : ''}`}
             href="#articles"
-            onClick={() => {
-              setActiveNav('articles')
-              setMenuOpen(false)
+            onClick={(e) => {
+              if (activeNav === 'mindmap') e.preventDefault()
+              navigateSection('articles')
             }}
           >
             <span className="nav-idx">01</span>
@@ -198,9 +262,9 @@ function App() {
           <a
             className={`nav-item ${activeNav === 'shelves' ? 'active' : ''}`}
             href="#shelves"
-            onClick={() => {
-              setActiveNav('shelves')
-              setMenuOpen(false)
+            onClick={(e) => {
+              if (activeNav === 'mindmap') e.preventDefault()
+              navigateSection('shelves')
             }}
           >
             <span className="nav-idx">02</span>
@@ -208,26 +272,38 @@ function App() {
             <span className="nav-count">{shelves.length}</span>
           </a>
           <a
-            className={`nav-item ${activeNav === 'projects' ? 'active' : ''}`}
-            href="#projects"
-            onClick={() => {
-              setActiveNav('projects')
-              setMenuOpen(false)
+            className={`nav-item ${activeNav === 'mindmap' ? 'active' : ''}`}
+            href="#mindmap"
+            onClick={(e) => {
+              e.preventDefault()
+              navigateSection('mindmap')
             }}
           >
             <span className="nav-idx">03</span>
+            <span className="nav-label">知识脑图</span>
+            <span className="nav-count">{mindmapSummary.totalNodes}</span>
+          </a>
+          <a
+            className={`nav-item ${activeNav === 'projects' ? 'active' : ''}`}
+            href="#projects"
+            onClick={(e) => {
+              if (activeNav === 'mindmap') e.preventDefault()
+              navigateSection('projects')
+            }}
+          >
+            <span className="nav-idx">04</span>
             <span className="nav-label">项目</span>
             <span className="nav-count">{projects.length}</span>
           </a>
           <a
             className={`nav-item ${activeNav === 'about' ? 'active' : ''}`}
             href="#about"
-            onClick={() => {
-              setActiveNav('about')
-              setMenuOpen(false)
+            onClick={(e) => {
+              if (activeNav === 'mindmap') e.preventDefault()
+              navigateSection('about')
             }}
           >
-            <span className="nav-idx">04</span>
+            <span className="nav-idx">05</span>
             <span className="nav-label">关于</span>
           </a>
         </nav>
@@ -297,6 +373,14 @@ function App() {
 
       {/* MAIN EDITORIAL CANVAS */}
       <main className="main-canvas" id="top">
+        {activeNav === 'mindmap' ? (
+          <div className="canvas-inner canvas-inner-wide">
+            <AgentMindmap
+              onBackToArticles={() => navigateSection('articles')}
+              onTreeChange={handleMindmapChange}
+            />
+          </div>
+        ) : (
         <div className="canvas-inner">
           {/* HEADER */}
           <header className="page-header">
@@ -479,11 +563,64 @@ function App() {
             </div>
           </section>
 
+          {/* KNOWLEDGE ATLAS / MINDMAP SHOWCASE SECTION */}
+          <section className="section-block" id="atlas-preview">
+            <div className="block-header">
+              <div>
+                <p className="section-index">KNOWLEDGE ATLAS / 03</p>
+                <h2>交互式知识脑图</h2>
+              </div>
+              <span className="block-note">左纲右树 · 支持动态生长节点与本地持久化</span>
+            </div>
+
+            <div
+              className="atlas-callout-card"
+              role="button"
+              tabIndex={0}
+              onClick={() => navigateSection('mindmap')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  navigateSection('mindmap')
+                }
+              }}
+            >
+              <div className="atlas-callout-main">
+                <div className="atlas-callout-badge">
+                  <GitBranch size={13} />
+                  <span>LIVING MINDMAP · 持续演进</span>
+                </div>
+                <h3>AI Agent 全景学习图谱</h3>
+                <p>
+                  涵盖理论基石、规划推理（ReAct / Reflexion / ToT）、多级记忆架构、MCP 工具协议、LangGraph 编排及生产级 AgentOps 评测体系。采用「左纲右树」零拖拽布局，可直接在浏览器中新增、打卡与批注节点。
+                </p>
+              </div>
+
+              <div className="atlas-callout-aside">
+                <div className="atlas-stat-pair">
+                  <div>
+                    <small>核心模块</small>
+                    <strong>{mindmapSummary.modules} 章</strong>
+                  </div>
+                  <div>
+                    <small>已点亮进度</small>
+                    <strong>
+                      {mindmapSummary.doneLeaves}/{mindmapSummary.totalLeaves}
+                    </strong>
+                  </div>
+                </div>
+                <span className="atlas-enter-btn">
+                  进入交互脑图 →
+                </span>
+              </div>
+            </div>
+          </section>
+
           {/* PROJECTS SECTION */}
           <section className="section-block" id="projects">
             <div className="block-header">
               <div>
-                <p className="section-index">PROJECTS / 03</p>
+                <p className="section-index">PROJECTS / 04</p>
                 <h2>个人项目</h2>
               </div>
               <span className="block-note">业余维护的开源代码与小工具</span>
@@ -518,7 +655,7 @@ function App() {
           <section className="section-block" id="about">
             <div className="block-header">
               <div>
-                <p className="section-index">ABOUT / 04</p>
+                <p className="section-index">ABOUT / 05</p>
                 <h2>关于</h2>
               </div>
             </div>
@@ -564,6 +701,7 @@ function App() {
             </div>
           </footer>
         </div>
+        )}
       </main>
 
       {/* ARTICLE READER DRAWER */}
