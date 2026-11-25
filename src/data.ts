@@ -1,5 +1,16 @@
+export type MarkdownBlock =
+  | { type: 'paragraph'; text: string }
+  | { type: 'heading'; level: 3 | 4; text: string }
+  | { type: 'image'; alt: string; src: string }
+  | { type: 'quote'; lines: string[]; variant?: 'tip' | 'note' | 'warning' }
+  | { type: 'list'; ordered: boolean; items: string[] }
+  | { type: 'table'; headers: string[]; rows: string[][] }
+  | { type: 'code'; lang: string; code: string }
+  | { type: 'hr' }
+
 export type PostSection = {
   heading?: string
+  blocks: MarkdownBlock[]
   paragraphs: string[]
   quote?: string
   bullets?: string[]
@@ -9,7 +20,7 @@ export type PostSection = {
   }
 }
 
-export type PostCategory = '后端' | 'Agent' | '服务器' | 'AI 订阅'
+export type PostCategory = '后端' | 'Agent' | '服务器' | 'AI 订阅' | '海外订阅'
 
 export type Post = {
   id: string
@@ -47,7 +58,7 @@ export type ProjectItem = {
   repoUrl: string
 }
 
-export const categories = ['全部', '后端', 'Agent', '服务器', 'AI 订阅'] as const
+export const categories = ['全部', '后端', 'Agent', '服务器', 'AI 订阅', '海外订阅'] as const
 
 export const shelves: Shelf[] = [
   {
@@ -77,6 +88,13 @@ export const shelves: Shelf[] = [
     title: 'AI 订阅实测与工具配比',
     description: '深度横评 Claude、ChatGPT、Gemini 与主流编程工具订阅，梳理最高性价比模型分流方案。',
     count: 2,
+  },
+  {
+    id: 'overseas-subscriptions',
+    index: '05',
+    title: '海外订阅与跨境支付实操',
+    description: '涵盖海外虚拟卡开卡、KYC 实名、USDT 链上充币、美区 Apple ID 与 ChatGPT/Claude 订阅避坑指南。',
+    count: 1,
   },
 ]
 
@@ -130,49 +148,158 @@ function parseFrontmatter(raw: string): {
   return { meta, body }
 }
 
+function parseTableRow(line: string): string[] {
+  const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '')
+  return trimmed.split('|').map((cell) => cell.trim())
+}
+
+function isTableSeparator(line: string): boolean {
+  return /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(line.trim())
+}
+
 function parseMarkdownSections(body: string): PostSection[] {
   const blocks = body.split(/\n##\s+/)
   return blocks.map((block, index) => {
     const lines = block.split('\n')
     const heading = index > 0 ? lines.shift()?.trim() : undefined
+    const parsedBlocks: MarkdownBlock[] = []
     const paragraphs: string[] = []
     const bullets: string[] = []
     let quote: string | undefined
     let codeSnippet: { lang: string; code: string } | undefined
 
-    let inCode = false
-    let codeLang = ''
-    let codeLines: string[] = []
+    let i = 0
+    while (i < lines.length) {
+      const line = lines[i]
+      const trimmed = line.trim()
 
-    for (const line of lines) {
-      if (line.startsWith('```')) {
-        if (!inCode) {
-          inCode = true
-          codeLang = line.slice(3).trim() || 'text'
-          codeLines = []
-        } else {
-          inCode = false
-          codeSnippet = { lang: codeLang, code: codeLines.join('\n') }
+      if (!trimmed) {
+        i++
+        continue
+      }
+
+      if (trimmed.startsWith('```')) {
+        const codeLang = trimmed.slice(3).trim() || 'text'
+        const codeLines: string[] = []
+        i++
+        while (i < lines.length && !lines[i].trim().startsWith('```')) {
+          codeLines.push(lines[i])
+          i++
+        }
+        if (i < lines.length) i++
+        const code = codeLines.join('\n')
+        codeSnippet = { lang: codeLang, code }
+        parsedBlocks.push({ type: 'code', lang: codeLang, code })
+        continue
+      }
+
+      if (/^---+$/.test(trimmed)) {
+        parsedBlocks.push({ type: 'hr' })
+        i++
+        continue
+      }
+
+      if (trimmed.startsWith('#### ')) {
+        parsedBlocks.push({ type: 'heading', level: 4, text: trimmed.slice(5).trim() })
+        i++
+        continue
+      }
+      if (trimmed.startsWith('### ')) {
+        parsedBlocks.push({ type: 'heading', level: 3, text: trimmed.slice(4).trim() })
+        i++
+        continue
+      }
+
+      const imgMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
+      if (imgMatch) {
+        parsedBlocks.push({ type: 'image', alt: imgMatch[1], src: imgMatch[2] })
+        i++
+        continue
+      }
+
+      if (trimmed.startsWith('>')) {
+        const quoteLines: string[] = []
+        let variant: 'tip' | 'note' | 'warning' | undefined
+        while (i < lines.length && lines[i].trim().startsWith('>')) {
+          const qText = lines[i].trim().replace(/^>\s?/, '').trim()
+          const tagMatch = qText.match(/^\[!(TIP|NOTE|WARNING)\]$/i)
+          if (tagMatch && quoteLines.length === 0) {
+            variant = tagMatch[1].toLowerCase() as 'tip' | 'note' | 'warning'
+          } else if (qText) {
+            quoteLines.push(qText)
+          }
+          i++
+        }
+        if (quoteLines.length > 0) {
+          quote = quoteLines.join(' ')
+          parsedBlocks.push({ type: 'quote', lines: quoteLines, variant })
         }
         continue
       }
-      if (inCode) {
-        codeLines.push(line)
+
+      if (
+        trimmed.includes('|') &&
+        i + 1 < lines.length &&
+        isTableSeparator(lines[i + 1])
+      ) {
+        const headers = parseTableRow(trimmed)
+        i += 2
+        const rows: string[][] = []
+        while (i < lines.length && lines[i].trim().includes('|') && !lines[i].trim().startsWith('>')) {
+          rows.push(parseTableRow(lines[i]))
+          i++
+        }
+        parsedBlocks.push({ type: 'table', headers, rows })
         continue
       }
-      const trimmed = line.trim()
-      if (!trimmed) continue
-      if (trimmed.startsWith('- ')) {
-        bullets.push(trimmed.slice(2).trim())
-      } else if (trimmed.startsWith('> ')) {
-        quote = trimmed.slice(2).trim()
-      } else {
-        paragraphs.push(trimmed)
+
+      const isUnordered = /^[-*]\s+/.test(trimmed)
+      const isOrdered = /^\d+\.\s+/.test(trimmed)
+      if (isUnordered || isOrdered) {
+        const items: string[] = []
+        const ordered = isOrdered
+        while (i < lines.length) {
+          const curr = lines[i]
+          const currTrimmed = curr.trim()
+          if (!currTrimmed) {
+            // Stop list on blank line unless next line continues the same list
+            const nextTrimmed = i + 1 < lines.length ? lines[i + 1].trim() : ''
+            const nextContinues = ordered
+              ? /^\d+\.\s+/.test(nextTrimmed)
+              : /^[-*]\s+/.test(nextTrimmed)
+            if (!nextContinues) break
+            i++
+            continue
+          }
+          if (ordered && /^\d+\.\s+/.test(currTrimmed)) {
+            items.push(currTrimmed.replace(/^\d+\.\s+/, '').trim())
+            i++
+          } else if (!ordered && /^[-*]\s+/.test(currTrimmed)) {
+            const itemText = currTrimmed.replace(/^[-*]\s+/, '').trim()
+            items.push(itemText)
+            bullets.push(itemText)
+            i++
+          } else if (/^\s+[-*]\s+/.test(curr) && items.length > 0) {
+            // Indented sub-bullet inside ordered/unordered item
+            const sub = currTrimmed.replace(/^[-*]\s+/, '').trim()
+            items[items.length - 1] += `\n${sub}`
+            i++
+          } else {
+            break
+          }
+        }
+        parsedBlocks.push({ type: 'list', ordered, items })
+        continue
       }
+
+      paragraphs.push(trimmed)
+      parsedBlocks.push({ type: 'paragraph', text: trimmed })
+      i++
     }
 
     return {
       heading,
+      blocks: parsedBlocks,
       paragraphs,
       quote,
       bullets: bullets.length > 0 ? bullets : undefined,
@@ -196,7 +323,7 @@ const allParsedPosts: Post[] = Object.entries(markdownFiles)
     const [, month = '01', day = '01'] = date.split('-')
     const shortDate = `${month}.${day}`
     const category = (
-      ['后端', 'Agent', '服务器', 'AI 订阅'].includes(meta.category)
+      ['后端', 'Agent', '服务器', 'AI 订阅', '海外订阅'].includes(meta.category)
         ? meta.category
         : '后端'
     ) as PostCategory

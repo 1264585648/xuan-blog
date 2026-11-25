@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -24,6 +24,32 @@ import {
 } from './data'
 
 const flatPosts = postGroups.flatMap((group) => group.posts)
+
+function renderInlineMarkdown(text: string): ReactNode[] {
+  const tokenRegex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g
+  const parts = text.split(tokenRegex)
+  return parts.map((part, idx) => {
+    if (!part) return null
+    if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
+      return <code key={idx}>{part.slice(1, -1)}</code>
+    }
+    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+      return <strong key={idx}>{renderInlineMarkdown(part.slice(2, -2))}</strong>
+    }
+    if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
+      return <em key={idx}>{renderInlineMarkdown(part.slice(1, -1))}</em>
+    }
+    const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
+    if (linkMatch) {
+      return (
+        <a key={idx} href={linkMatch[2]} target="_blank" rel="noreferrer">
+          {linkMatch[1]}
+        </a>
+      )
+    }
+    return <Fragment key={idx}>{part}</Fragment>
+  })
+}
 
 type AccentTheme = 'sage' | 'Slate' | 'sand'
 
@@ -497,7 +523,7 @@ function App() {
                 <p className="section-index">TOPICS / 02</p>
                 <h2>专题整理</h2>
               </div>
-              <span className="block-note">围绕四大核心技术方向归类的系列笔记</span>
+              <span className="block-note">围绕核心技术与实操方向归类的系列笔记</span>
             </div>
 
             <div className="hairline-grid shelves-grid">
@@ -741,24 +767,100 @@ function App() {
                 {selectedPost.sections.map((sec, idx) => (
                   <section key={idx} className="prose-section">
                     {sec.heading && <h2>{sec.heading}</h2>}
-                    {sec.paragraphs.map((p, pIdx) => (
-                      <p key={pIdx}>{p}</p>
-                    ))}
-                    {sec.quote && (
-                      <blockquote className="prose-quote">{sec.quote}</blockquote>
-                    )}
-                    {sec.bullets && (
-                      <ul>
-                        {sec.bullets.map((b, bIdx) => (
-                          <li key={bIdx}>{b}</li>
-                        ))}
-                      </ul>
-                    )}
-                    {sec.codeSnippet && (
-                      <pre>
-                        <code>{sec.codeSnippet.code}</code>
-                      </pre>
-                    )}
+                    {sec.blocks.map((block, bIdx) => {
+                      if (block.type === 'paragraph') {
+                        return <p key={bIdx}>{renderInlineMarkdown(block.text)}</p>
+                      }
+                      if (block.type === 'heading') {
+                        return block.level === 3 ? (
+                          <h3 key={bIdx}>{renderInlineMarkdown(block.text)}</h3>
+                        ) : (
+                          <h4 key={bIdx}>{renderInlineMarkdown(block.text)}</h4>
+                        )
+                      }
+                      if (block.type === 'image') {
+                        return (
+                          <figure key={bIdx} className="prose-figure">
+                            <img
+                              src={block.src}
+                              alt={block.alt}
+                              className="prose-image"
+                              loading="lazy"
+                            />
+                            {block.alt && <figcaption>{block.alt}</figcaption>}
+                          </figure>
+                        )
+                      }
+                      if (block.type === 'quote') {
+                        return (
+                          <blockquote
+                            key={bIdx}
+                            className={`prose-quote ${block.variant ? `is-${block.variant}` : ''}`}
+                          >
+                            {block.lines.map((line, lIdx) => (
+                              <p key={lIdx}>{renderInlineMarkdown(line)}</p>
+                            ))}
+                          </blockquote>
+                        )
+                      }
+                      if (block.type === 'list') {
+                        const ListTag = block.ordered ? 'ol' : 'ul'
+                        return (
+                          <ListTag key={bIdx}>
+                            {block.items.map((item, iIdx) => {
+                              const [main, ...subs] = item.split('\n')
+                              return (
+                                <li key={iIdx}>
+                                  {renderInlineMarkdown(main)}
+                                  {subs.length > 0 && (
+                                    <ul>
+                                      {subs.map((sub, sIdx) => (
+                                        <li key={sIdx}>{renderInlineMarkdown(sub)}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </li>
+                              )
+                            })}
+                          </ListTag>
+                        )
+                      }
+                      if (block.type === 'table') {
+                        return (
+                          <div key={bIdx} className="prose-table-wrap">
+                            <table className="prose-table">
+                              <thead>
+                                <tr>
+                                  {block.headers.map((h, hIdx) => (
+                                    <th key={hIdx}>{renderInlineMarkdown(h)}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {block.rows.map((row, rIdx) => (
+                                  <tr key={rIdx}>
+                                    {row.map((cell, cIdx) => (
+                                      <td key={cIdx}>{renderInlineMarkdown(cell)}</td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )
+                      }
+                      if (block.type === 'code') {
+                        return (
+                          <pre key={bIdx}>
+                            <code>{block.code}</code>
+                          </pre>
+                        )
+                      }
+                      if (block.type === 'hr') {
+                        return <hr key={bIdx} className="prose-hr" />
+                      }
+                      return null
+                    })}
                   </section>
                 ))}
               </div>
