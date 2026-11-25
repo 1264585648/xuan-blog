@@ -25,6 +25,13 @@ import {
 
 const flatPosts = postGroups.flatMap((group) => group.posts)
 
+function getPostIdFromLocation(): string | null {
+  const match = window.location.pathname.match(/^\/posts\/([^/]+)\/?$/)
+  if (!match) return null
+  const id = decodeURIComponent(match[1])
+  return flatPosts.some((post) => post.id === id) ? id : null
+}
+
 function renderInlineMarkdown(text: string): ReactNode[] {
   const tokenRegex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g
   const parts = text.split(tokenRegex)
@@ -75,7 +82,9 @@ function App() {
   const [activeNav, setActiveNav] = useState<
     'articles' | 'shelves' | 'mindmap' | 'projects' | 'about'
   >(() => (window.location.hash === '#mindmap' ? 'mindmap' : 'articles'))
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(() =>
+    getPostIdFromLocation(),
+  )
   const [mindmapSummary, setMindmapSummary] = useState(() => {
     const def = getPublishedMindmap()
     return {
@@ -95,19 +104,35 @@ function App() {
     target: 'articles' | 'shelves' | 'mindmap' | 'projects' | 'about',
   ) => {
     const wasMindmap = activeNav === 'mindmap'
+    const wasPost = selectedPostId !== null
+    setSelectedPostId(null)
     setActiveNav(target)
     setMenuOpen(false)
     if (target === 'mindmap') {
-      window.history.replaceState(null, '', '#mindmap')
+      window.history.pushState(null, '', '/#mindmap')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
-      window.history.replaceState(null, '', `#${target}`)
-      if (wasMindmap) {
+      window.history.pushState(null, '', `/#${target}`)
+      if (wasMindmap || wasPost) {
         requestAnimationFrame(() => {
           document.getElementById(target)?.scrollIntoView({ behavior: 'smooth' })
         })
       }
     }
+  }
+
+  const openPost = (postId: string) => {
+    setSelectedPostId(postId)
+    setActiveNav('articles')
+    setMenuOpen(false)
+    window.history.pushState({ postId }, '', `/posts/${encodeURIComponent(postId)}`)
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }
+
+  const closePost = () => {
+    setSelectedPostId(null)
+    window.history.pushState(null, '', '/')
+    window.scrollTo({ top: 0, behavior: 'auto' })
   }
 
   const searchInputRef = useRef<HTMLInputElement | null>(null)
@@ -132,11 +157,25 @@ function App() {
       }
       if (event.key === 'Escape') {
         setMenuOpen(false)
-        setSelectedPostId(null)
+        if (selectedPostId) {
+          closePost()
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedPostId])
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const postId = getPostIdFromLocation()
+      setSelectedPostId(postId)
+      if (!postId) {
+        setActiveNav(window.location.hash === '#mindmap' ? 'mindmap' : 'articles')
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
   const categoryCounts = useMemo(() => {
@@ -183,6 +222,12 @@ function App() {
 
   const activeShelfObj = shelves.find((s) => s.id === activeShelf)
 
+  useEffect(() => {
+    document.title = selectedPost
+      ? `${selectedPost.title} — 朱轩 · Xuan Blog`
+      : '朱轩 · Xuan Blog — 后端 · Agent · 服务器 · AI 订阅'
+  }, [selectedPost])
+
   const clearFilters = () => {
     setActiveCategory('全部')
     setActiveShelf(null)
@@ -197,9 +242,11 @@ function App() {
       <header className="mobile-bar">
         <a
           className="brand"
-          href="#top"
-          onClick={() => {
-            if (activeNav === 'mindmap') navigateSection('articles')
+          href="/"
+          onClick={(e) => {
+            e.preventDefault()
+            if (selectedPostId) closePost()
+            else if (activeNav === 'mindmap') navigateSection('articles')
           }}
         >
           <span className="brand-dot" />
@@ -233,9 +280,11 @@ function App() {
           <div className="sidebar-brand-row">
             <a
               className="brand"
-              href="#top"
-              onClick={() => {
-                if (activeNav === 'mindmap') navigateSection('articles')
+              href="/"
+              onClick={(e) => {
+                e.preventDefault()
+                if (selectedPostId) closePost()
+                else if (activeNav === 'mindmap') navigateSection('articles')
                 else setMenuOpen(false)
               }}
             >
@@ -259,10 +308,10 @@ function App() {
 
         <nav className="side-nav" aria-label="主导航">
           <a
-            className={`nav-item ${activeNav === 'articles' ? 'active' : ''}`}
-            href="#articles"
+            className={`nav-item ${!selectedPost && activeNav === 'articles' ? 'active' : ''}`}
+            href="/#articles"
             onClick={(e) => {
-              if (activeNav === 'mindmap') e.preventDefault()
+              e.preventDefault()
               navigateSection('articles')
             }}
           >
@@ -271,10 +320,10 @@ function App() {
             <span className="nav-count">{flatPosts.length}</span>
           </a>
           <a
-            className={`nav-item ${activeNav === 'shelves' ? 'active' : ''}`}
-            href="#shelves"
+            className={`nav-item ${!selectedPost && activeNav === 'shelves' ? 'active' : ''}`}
+            href="/#shelves"
             onClick={(e) => {
-              if (activeNav === 'mindmap') e.preventDefault()
+              e.preventDefault()
               navigateSection('shelves')
             }}
           >
@@ -283,8 +332,8 @@ function App() {
             <span className="nav-count">{shelves.length}</span>
           </a>
           <a
-            className={`nav-item ${activeNav === 'mindmap' ? 'active' : ''}`}
-            href="#mindmap"
+            className={`nav-item ${!selectedPost && activeNav === 'mindmap' ? 'active' : ''}`}
+            href="/#mindmap"
             onClick={(e) => {
               e.preventDefault()
               navigateSection('mindmap')
@@ -295,10 +344,10 @@ function App() {
             <span className="nav-count">{mindmapSummary.totalNodes}</span>
           </a>
           <a
-            className={`nav-item ${activeNav === 'projects' ? 'active' : ''}`}
-            href="#projects"
+            className={`nav-item ${!selectedPost && activeNav === 'projects' ? 'active' : ''}`}
+            href="/#projects"
             onClick={(e) => {
-              if (activeNav === 'mindmap') e.preventDefault()
+              e.preventDefault()
               navigateSection('projects')
             }}
           >
@@ -307,10 +356,10 @@ function App() {
             <span className="nav-count">{projects.length}</span>
           </a>
           <a
-            className={`nav-item ${activeNav === 'about' ? 'active' : ''}`}
-            href="#about"
+            className={`nav-item ${!selectedPost && activeNav === 'about' ? 'active' : ''}`}
+            href="/#about"
             onClick={(e) => {
-              if (activeNav === 'mindmap') e.preventDefault()
+              e.preventDefault()
               navigateSection('about')
             }}
           >
@@ -384,7 +433,194 @@ function App() {
 
       {/* MAIN EDITORIAL CANVAS */}
       <main className="main-canvas" id="top">
-        {activeNav === 'mindmap' ? (
+        {selectedPost ? (
+          <div className="canvas-inner article-page-inner">
+            <article className="article-page" aria-labelledby="reader-title">
+              <header className="article-page-bar">
+                <button
+                  type="button"
+                  className="reader-back"
+                  onClick={closePost}
+                >
+                  <ArrowLeft size={15} />
+                  <span>返回目录</span>
+                </button>
+                <span className="article-route-badge">
+                  /posts/{selectedPost.id}
+                </span>
+              </header>
+
+              <div className="article-page-body">
+                <div className="reader-meta">
+                  <span>{selectedPost.category}</span>
+                  <span>·</span>
+                  <time>{selectedPost.date}</time>
+                  <span>·</span>
+                  <span>{selectedPost.readTime}</span>
+                </div>
+
+                <h1 id="reader-title" className="reader-title">
+                  {selectedPost.title}
+                </h1>
+
+                <p className="reader-summary">{selectedPost.summary}</p>
+
+                <hr className="reader-rule" />
+
+                <div className="reader-prose">
+                  {selectedPost.sections.map((sec, idx) => (
+                    <section key={idx} className="prose-section">
+                      {sec.heading && <h2>{sec.heading}</h2>}
+                      {sec.blocks.map((block, bIdx) => {
+                        if (block.type === 'paragraph') {
+                          return <p key={bIdx}>{renderInlineMarkdown(block.text)}</p>
+                        }
+                        if (block.type === 'heading') {
+                          return block.level === 3 ? (
+                            <h3 key={bIdx}>{renderInlineMarkdown(block.text)}</h3>
+                          ) : (
+                            <h4 key={bIdx}>{renderInlineMarkdown(block.text)}</h4>
+                          )
+                        }
+                        if (block.type === 'image') {
+                          return (
+                            <figure key={bIdx} className="prose-figure">
+                              <img
+                                src={block.src}
+                                alt={block.alt}
+                                className="prose-image"
+                                loading="lazy"
+                              />
+                              {block.alt && <figcaption>{block.alt}</figcaption>}
+                            </figure>
+                          )
+                        }
+                        if (block.type === 'quote') {
+                          return (
+                            <blockquote
+                              key={bIdx}
+                              className={`prose-quote ${block.variant ? `is-${block.variant}` : ''}`}
+                            >
+                              {block.lines.map((line, lIdx) => (
+                                <p key={lIdx}>{renderInlineMarkdown(line)}</p>
+                              ))}
+                            </blockquote>
+                          )
+                        }
+                        if (block.type === 'list') {
+                          const ListTag = block.ordered ? 'ol' : 'ul'
+                          return (
+                            <ListTag key={bIdx}>
+                              {block.items.map((item, iIdx) => {
+                                const [main, ...subs] = item.split('\n')
+                                return (
+                                  <li key={iIdx}>
+                                    {renderInlineMarkdown(main)}
+                                    {subs.length > 0 && (
+                                      <ul>
+                                        {subs.map((sub, sIdx) => (
+                                          <li key={sIdx}>{renderInlineMarkdown(sub)}</li>
+                                        ))}
+                                      </ul>
+                                    )}
+                                  </li>
+                                )
+                              })}
+                            </ListTag>
+                          )
+                        }
+                        if (block.type === 'table') {
+                          return (
+                            <div key={bIdx} className="prose-table-wrap">
+                              <table className="prose-table">
+                                <thead>
+                                  <tr>
+                                    {block.headers.map((h, hIdx) => (
+                                      <th key={hIdx}>{renderInlineMarkdown(h)}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {block.rows.map((row, rIdx) => (
+                                    <tr key={rIdx}>
+                                      {row.map((cell, cIdx) => (
+                                        <td key={cIdx}>{renderInlineMarkdown(cell)}</td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )
+                        }
+                        if (block.type === 'code') {
+                          return (
+                            <pre key={bIdx}>
+                              <code>{block.code}</code>
+                            </pre>
+                          )
+                        }
+                        if (block.type === 'hr') {
+                          return <hr key={bIdx} className="prose-hr" />
+                        }
+                        return null
+                      })}
+                    </section>
+                  ))}
+                </div>
+
+                {selectedPost.relatedIds.length > 0 && (
+                  <aside className="reader-related">
+                    <h3>相关文章</h3>
+                    <div className="related-list">
+                      {selectedPost.relatedIds.map((relId) => {
+                        const rel = flatPosts.find((p) => p.id === relId)
+                        if (!rel) return null
+                        return (
+                          <button
+                            key={rel.id}
+                            type="button"
+                            className="related-item"
+                            onClick={() => openPost(rel.id)}
+                          >
+                            <span>{rel.title}</span>
+                            <time>{rel.date}</time>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </aside>
+                )}
+
+                <nav className="reader-pager" aria-label="上下篇">
+                  {adjacentPosts.prev ? (
+                    <button
+                      type="button"
+                      onClick={() => openPost(adjacentPosts.prev!.id)}
+                    >
+                      <small>← 上一篇</small>
+                      <span>{adjacentPosts.prev.title}</span>
+                    </button>
+                  ) : (
+                    <div />
+                  )}
+                  {adjacentPosts.next ? (
+                    <button
+                      type="button"
+                      className="pager-next"
+                      onClick={() => openPost(adjacentPosts.next!.id)}
+                    >
+                      <small>下一篇 →</small>
+                      <span>{adjacentPosts.next.title}</span>
+                    </button>
+                  ) : (
+                    <div />
+                  )}
+                </nav>
+              </div>
+            </article>
+          </div>
+        ) : activeNav === 'mindmap' ? (
           <div className="canvas-inner canvas-inner-wide">
             <AgentMindmap
               onBackToArticles={() => navigateSection('articles')}
@@ -480,7 +716,7 @@ function App() {
                         <article
                           key={post.id}
                           className="post-item"
-                          onClick={() => setSelectedPostId(post.id)}
+                          onClick={() => openPost(post.id)}
                         >
                           <div className="post-item-main">
                             <h2 className="post-item-title">
@@ -561,7 +797,7 @@ function App() {
                         <li key={p.id}>
                           <button
                             type="button"
-                            onClick={() => setSelectedPostId(p.id)}
+                            onClick={() => openPost(p.id)}
                           >
                             <span>{p.title}</span>
                           </button>
@@ -713,210 +949,6 @@ function App() {
         </div>
         )}
       </main>
-
-      {/* ARTICLE READER DRAWER */}
-      {selectedPost && (
-        <div
-          className="reader-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="reader-title"
-          onClick={() => setSelectedPostId(null)}
-        >
-          <article
-            className="reader-sheet"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <header className="reader-bar">
-              <button
-                type="button"
-                className="reader-back"
-                onClick={() => setSelectedPostId(null)}
-              >
-                <ArrowLeft size={15} />
-                <span>返回目录</span>
-              </button>
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label="关闭"
-                onClick={() => setSelectedPostId(null)}
-              >
-                <X size={17} />
-              </button>
-            </header>
-
-            <div className="reader-body-wrap">
-              <div className="reader-meta">
-                <span>{selectedPost.category}</span>
-                <span>·</span>
-                <time>{selectedPost.date}</time>
-                <span>·</span>
-                <span>{selectedPost.readTime}</span>
-              </div>
-
-              <h1 id="reader-title" className="reader-title">
-                {selectedPost.title}
-              </h1>
-
-              <p className="reader-summary">{selectedPost.summary}</p>
-
-              <hr className="reader-rule" />
-
-              <div className="reader-prose">
-                {selectedPost.sections.map((sec, idx) => (
-                  <section key={idx} className="prose-section">
-                    {sec.heading && <h2>{sec.heading}</h2>}
-                    {sec.blocks.map((block, bIdx) => {
-                      if (block.type === 'paragraph') {
-                        return <p key={bIdx}>{renderInlineMarkdown(block.text)}</p>
-                      }
-                      if (block.type === 'heading') {
-                        return block.level === 3 ? (
-                          <h3 key={bIdx}>{renderInlineMarkdown(block.text)}</h3>
-                        ) : (
-                          <h4 key={bIdx}>{renderInlineMarkdown(block.text)}</h4>
-                        )
-                      }
-                      if (block.type === 'image') {
-                        return (
-                          <figure key={bIdx} className="prose-figure">
-                            <img
-                              src={block.src}
-                              alt={block.alt}
-                              className="prose-image"
-                              loading="lazy"
-                            />
-                            {block.alt && <figcaption>{block.alt}</figcaption>}
-                          </figure>
-                        )
-                      }
-                      if (block.type === 'quote') {
-                        return (
-                          <blockquote
-                            key={bIdx}
-                            className={`prose-quote ${block.variant ? `is-${block.variant}` : ''}`}
-                          >
-                            {block.lines.map((line, lIdx) => (
-                              <p key={lIdx}>{renderInlineMarkdown(line)}</p>
-                            ))}
-                          </blockquote>
-                        )
-                      }
-                      if (block.type === 'list') {
-                        const ListTag = block.ordered ? 'ol' : 'ul'
-                        return (
-                          <ListTag key={bIdx}>
-                            {block.items.map((item, iIdx) => {
-                              const [main, ...subs] = item.split('\n')
-                              return (
-                                <li key={iIdx}>
-                                  {renderInlineMarkdown(main)}
-                                  {subs.length > 0 && (
-                                    <ul>
-                                      {subs.map((sub, sIdx) => (
-                                        <li key={sIdx}>{renderInlineMarkdown(sub)}</li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                </li>
-                              )
-                            })}
-                          </ListTag>
-                        )
-                      }
-                      if (block.type === 'table') {
-                        return (
-                          <div key={bIdx} className="prose-table-wrap">
-                            <table className="prose-table">
-                              <thead>
-                                <tr>
-                                  {block.headers.map((h, hIdx) => (
-                                    <th key={hIdx}>{renderInlineMarkdown(h)}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {block.rows.map((row, rIdx) => (
-                                  <tr key={rIdx}>
-                                    {row.map((cell, cIdx) => (
-                                      <td key={cIdx}>{renderInlineMarkdown(cell)}</td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )
-                      }
-                      if (block.type === 'code') {
-                        return (
-                          <pre key={bIdx}>
-                            <code>{block.code}</code>
-                          </pre>
-                        )
-                      }
-                      if (block.type === 'hr') {
-                        return <hr key={bIdx} className="prose-hr" />
-                      }
-                      return null
-                    })}
-                  </section>
-                ))}
-              </div>
-
-              {selectedPost.relatedIds.length > 0 && (
-                <aside className="reader-related">
-                  <h3>相关文章</h3>
-                  <div className="related-list">
-                    {selectedPost.relatedIds.map((relId) => {
-                      const rel = flatPosts.find((p) => p.id === relId)
-                      if (!rel) return null
-                      return (
-                        <button
-                          key={rel.id}
-                          type="button"
-                          className="related-item"
-                          onClick={() => setSelectedPostId(rel.id)}
-                        >
-                          <span>{rel.title}</span>
-                          <time>{rel.date}</time>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </aside>
-              )}
-
-              <nav className="reader-pager" aria-label="上下篇">
-                {adjacentPosts.prev ? (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPostId(adjacentPosts.prev!.id)}
-                  >
-                    <small>← 上一篇</small>
-                    <span>{adjacentPosts.prev.title}</span>
-                  </button>
-                ) : (
-                  <div />
-                )}
-                {adjacentPosts.next ? (
-                  <button
-                    type="button"
-                    className="pager-next"
-                    onClick={() => setSelectedPostId(adjacentPosts.next!.id)}
-                  >
-                    <small>下一篇 →</small>
-                    <span>{adjacentPosts.next.title}</span>
-                  </button>
-                ) : (
-                  <div />
-                )}
-              </nav>
-            </div>
-          </article>
-        </div>
-      )}
     </div>
   )
 }
