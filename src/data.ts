@@ -20,7 +20,7 @@ export type PostSection = {
   }
 }
 
-export type PostCategory = '后端' | 'Agent' | '服务器' | 'AI 订阅' | '海外订阅'
+export type PostCategory = '后端' | 'Agent' | 'MCP' | '服务器' | 'AI 订阅' | '海外订阅'
 
 export type Post = {
   id: string
@@ -58,7 +58,7 @@ export type ProjectItem = {
   repoUrl: string
 }
 
-export const categories = ['全部', '后端', 'Agent', '服务器', 'AI 订阅', '海外订阅'] as const
+export const categories = ['全部', '后端', 'Agent', 'MCP', '服务器', 'AI 订阅', '海外订阅'] as const
 
 export const shelves: Shelf[] = [
   {
@@ -96,13 +96,20 @@ export const shelves: Shelf[] = [
     description: '涵盖海外虚拟卡开卡、KYC 实名、USDT 链上充币、美区 Apple ID 与 ChatGPT/Claude 订阅避坑指南。',
     count: 1,
   },
+  {
+    id: 'mcp-series',
+    index: '06',
+    title: 'MCP 协议深度解析与实战',
+    description: '从为什么叫「模型上下文协议」、与直调 API 的本质差异，到三大原语拆解与内部接口快速封装实战。',
+    count: 1,
+  },
 ]
 
 export const projects: ProjectItem[] = [
   {
     name: 'xuan-blog',
     year: '2026',
-    description: '个人技术博客与交互式 AI Agent 全景学习脑图，基于静态构建配合边缘网络自动发布。',
+    description: '个人技术博客，Markdown 写作 + 静态构建，配合边缘网络自动发布。',
     stack: ['TypeScript', 'React', 'Cloudflare Pages'],
     repoUrl: 'https://github.com/1264585648/xuan-blog',
   },
@@ -323,7 +330,7 @@ const allParsedPosts: Post[] = Object.entries(markdownFiles)
     const [, month = '01', day = '01'] = date.split('-')
     const shortDate = `${month}.${day}`
     const category = (
-      ['后端', 'Agent', '服务器', 'AI 订阅', '海外订阅'].includes(meta.category)
+      ['后端', 'Agent', 'MCP', '服务器', 'AI 订阅', '海外订阅'].includes(meta.category)
         ? meta.category
         : '后端'
     ) as PostCategory
