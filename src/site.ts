@@ -14,7 +14,7 @@ export const NAV_SECTION_IDS: readonly NavSection[] = NAV_SECTIONS.map((s) => s.
 const THEME_KEY = 'xuan-theme'
 const ACCENT_KEY = 'xuan-accent'
 
-export const SITE_TITLE = '朱轩 · Xuan Blog — 后端 · Agent · 服务器 · AI 订阅'
+export const SITE_TITLE = 'Xuan Blog — 后端 · Agent · MCP · 海外订阅'
 
 function safeGet(key: string): string | null {
   try {

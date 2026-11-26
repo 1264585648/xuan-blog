@@ -160,7 +160,7 @@ function AboutSection() {
       <div className="about-columns">
         <div className="about-col">
           <p>
-            我是朱轩，一名后端工程师，日常工作围绕高可用服务端架构、分布式存储与 AI Agent 工程化落地展开。业余喜欢在自己的云服务器上折腾容器编排与边缘网络，也长期实测对比各类主流大模型与 AI 编程订阅服务。
+            我是一名后端工程师，日常工作围绕高可用服务端架构、分布式存储与 AI Agent 工程化落地展开。业余喜欢在自己的云服务器上折腾容器编排与边缘网络，也长期实测对比各类主流大模型与 AI 编程订阅服务。
           </p>
           <p>
             这个博客坚持极简纯静态架构：通过本地 Markdown 写作配合 Git 推送自动构建发布，去掉后台维护负担，把重心放在清晰的分类检索与沉浸阅读体验上。
@@ -217,7 +217,7 @@ export function HomeView({
       <AboutSection />
 
       <footer className="footer">
-        <span>© 2026 朱轩 (Xuan). All rights reserved.</span>
+        <span>© 2026 Xuan Blog. All rights reserved.</span>
         <div className="footer-links">
           <a href="https://github.com/1264585648/xuan-blog" target="_blank" rel="noreferrer">
             源码仓库

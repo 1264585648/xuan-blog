@@ -1,4 +1,4 @@
-# 朱轩 · Xuan Blog
+# Xuan Blog
 
 > 访问地址：[https://blog.vibe-show.com](https://blog.vibe-show.com)（通过 vibe-show 边缘反代驱动，源站托管于 Cloudflare Pages）
 

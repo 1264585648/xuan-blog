@@ -44,7 +44,7 @@ export function Sidebar({
         <div className="sidebar-brand-row">
           <a className="brand" href="/" onClick={handleBrand}>
             <span className="brand-dot" />
-            <span>朱轩 · Xuan</span>
+            <span>Xuan Blog</span>
           </a>
           <button
             className="icon-btn sidebar-close"

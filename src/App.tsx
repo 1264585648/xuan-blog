@@ -109,7 +109,7 @@ function App() {
   useEffect(() => persist('accent', accent), [accent])
 
   useEffect(() => {
-    document.title = selectedPost ? `${selectedPost.title} — 朱轩 · Xuan Blog` : SITE_TITLE
+    document.title = selectedPost ? `${selectedPost.title} — Xuan Blog` : SITE_TITLE
   }, [selectedPost])
 
   const openPost = useCallback(
@@ -211,7 +211,7 @@ function App() {
           }}
         >
           <span className="brand-dot" />
-          <span>朱轩 · Xuan</span>
+          <span>Xuan Blog</span>
         </a>
         <div className="mobile-bar-actions">
           <button className="icon-btn" type="button" aria-label="切换深浅色" onClick={toggleTheme}>
