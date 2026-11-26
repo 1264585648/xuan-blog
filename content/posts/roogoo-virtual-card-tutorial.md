@@ -6,7 +6,6 @@ tags: 海外订阅, 虚拟卡, ROOGOO, ChatGPT, Claude
 summary: 从官网注册、KYC 实名认证、USDT 链上充币到四大虚拟卡选卡对比与 ChatGPT/Claude/Apple Pay 绑卡避坑，附全流程实拍截图与 $0 开卡费专属邀请福利。
 featured: true
 shelfId: overseas-subscriptions
-relatedIds: ai-coding-subscriptions-comparison-2026, api-quota-routing-and-subscription-budget
 ---
 
 > [!TIP]

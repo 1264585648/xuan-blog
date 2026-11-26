@@ -6,7 +6,6 @@ tags: MCP, Model Context Protocol, Agent 工程, FastMCP
 summary: 从一次绕开前端 WebGL 卡死的内部生图接口改造聊起：顺着真实的工程折腾，理清为什么它偏偏叫「模型上下文协议」、它和直接让 AI 调接口到底差在哪，以及如何把碎片接口收口成顺手的工具。
 featured: true
 shelfId: mcp-series
-relatedIds: mcp-server-for-backend-debugging, production-agent-loop-and-guardrails
 ---
 
 今天上午折腾内部平台的生图功能时，碰上了一个让人哭笑不得的前端 Bug。
